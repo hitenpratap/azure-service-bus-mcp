@@ -24,7 +24,7 @@ func (c *Client) ListMessages(ctx context.Context, from, to *time.Time) ([]Messa
 
 	var result []MessageInfo
 	for {
-		msgs, err := receiver.ReceiveMessages(ctx, 100, nil)
+		msgs, err := receiver.PeekMessages(ctx, 100, nil)
 		if err != nil {
 			return nil, fmt.Errorf("receive error: %w", err)
 		}

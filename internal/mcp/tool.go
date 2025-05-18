@@ -113,7 +113,36 @@ func Register(sb *servicebus.Client, srv *server.MCPServer) {
 			return mcp.NewToolResultErrorFromErr("failed to fetch message", err), nil
 		}
 
-		data, err := json.Marshal(msg)
+		// Convert ApplicationProperties to map[string]interface{}
+		props := make(map[string]interface{})
+		for k, v := range msg.ApplicationProperties {
+			props[k] = v
+		}
+
+		resp := struct {
+			SequenceNumber int64                  `json:"sequenceNumber"`
+			EnqueuedTime   string                 `json:"enqueuedTime"`
+			Body           string                 `json:"body"`
+			Properties     map[string]interface{} `json:"properties"`
+			SystemProps    map[string]interface{} `json:"systemProperties"`
+		}{
+			SequenceNumber: *msg.SequenceNumber,
+			EnqueuedTime:   msg.EnqueuedTime.Format(time.RFC3339),
+			Body:           string(msg.Body),
+			Properties:     props,
+			SystemProps: map[string]interface{}{
+				"MessageID":      msg.MessageID,
+				"ContentType":    msg.ContentType,
+				"CorrelationID":  msg.CorrelationID,
+				"Subject":        msg.Subject,
+				"To":             msg.To,
+				"ReplyTo":        msg.ReplyTo,
+				"ReplyToSession": msg.ReplyToSessionID,
+				"SessionID":      msg.SessionID,
+			},
+		}
+
+		data, err := json.Marshal(resp)
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("failed to marshal message", err), nil
 		}

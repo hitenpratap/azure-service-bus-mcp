@@ -25,7 +25,7 @@ func (c *Client) ListDeadLetters(ctx context.Context, from, to *time.Time) ([]De
 
 	var result []DeadLetterInfo
 	for {
-		msgs, err := receiver.ReceiveMessages(ctx, 100, nil)
+		msgs, err := receiver.PeekMessages(ctx, 100, nil)
 		if err != nil {
 			return nil, fmt.Errorf("DLQ receive error: %w", err)
 		}
