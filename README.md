@@ -142,10 +142,10 @@ When you connect this project as an MCP tool (in Claude Desktop, VS Code, or Doc
 4. Enter:
    ```json
    "azure-servicebus-mcp": {
-    "command": "/Users/hiten.singh/projects/mcp-azure-service-bus/bin/azure-servicebus-mcp",
+    "command": "/absolute/path/to/bin/azure-servicebus-mcp",
     "args": [
         "--config",
-        "/Users/hiten.singh/projects/mcp-azure-service-bus/config/config.yaml"
+        "/absolute/path/to/config/config.yaml"
     ],
     "env": {}
     }
