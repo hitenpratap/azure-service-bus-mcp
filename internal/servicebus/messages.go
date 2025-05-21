@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus"
+	azsb "github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus" // Added alias
 	"github.com/hitenpratap/mcp-azure-service-bus/pkg/filter"
 )
+
+// Explicitly use a type from the aliased package to mark it as used.
+var _ *azsb.ReceivedMessage
 
 // MessageInfo holds the minimal message metadata
 type MessageInfo struct {
@@ -17,24 +20,29 @@ type MessageInfo struct {
 
 // ListMessages returns messages in the queue or subscription, optionally filtered by datetime range
 func (c *Client) ListMessages(ctx context.Context, from, to *time.Time) ([]MessageInfo, error) {
-	var receiver *azservicebus.Receiver
+	var receiver SDKReceiver // Changed from *azservicebus.Receiver
 	var err error
 
-	if c.queueName != "" {
-		receiver, err = c.rawClient.NewReceiverForQueue(c.queueName, nil)
-	} else if c.topicName != "" && c.subscription != "" {
-		receiver, err = c.rawClient.NewReceiverForSubscription(c.topicName, c.subscription, nil)
+	if c.QueueName != "" {
+		receiver, err = c.AzClient.NewReceiverForQueue(c.QueueName, nil)
+	} else if c.TopicName != "" && c.Subscription != "" {
+		receiver, err = c.AzClient.NewReceiverForSubscription(c.TopicName, c.Subscription, nil)
 	} else {
 		return nil, fmt.Errorf("no queue or topic/subscription configured")
 	}
 	if err != nil {
 		return nil, fmt.Errorf("error creating receiver: %w", err)
 	}
-	defer receiver.Close(ctx)
+	// Ensure receiver is not nil before attempting to close it, especially if NewReceiverFor... could return a nil receiver AND nil error (though unlikely for this SDK).
+	if receiver != nil {
+		defer receiver.Close(ctx)
+	}
+
 
 	var result []MessageInfo
 	for {
-		msgs, err := receiver.PeekMessages(ctx, 100, nil)
+		// Assuming PeekMessages is available on SDKReceiver
+		msgs, err := receiver.PeekMessages(ctx, 100, nil) // This call remains the same due to the interface
 		if err != nil {
 			return nil, fmt.Errorf("receive error: %w", err)
 		}
