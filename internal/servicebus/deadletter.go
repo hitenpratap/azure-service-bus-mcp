@@ -15,9 +15,18 @@ type DeadLetterInfo struct {
 	EnqueuedTime   time.Time `json:"enqueuedTime"`
 }
 
-// ListDeadLetters returns messages in the dead-letter queue, optionally filtered by datetime range
+// ListDeadLetters returns messages in the dead-letter queue or subscription DLQ, optionally filtered by datetime range
 func (c *Client) ListDeadLetters(ctx context.Context, from, to *time.Time) ([]DeadLetterInfo, error) {
-	receiver, err := c.rawClient.NewReceiverForQueue(c.dlqQueueName, nil)
+	var receiver *azservicebus.Receiver
+	var err error
+
+	if c.dlqQueueName != "" {
+		receiver, err = c.rawClient.NewReceiverForQueue(c.dlqQueueName, nil)
+	} else if c.dlqSubName != "" {
+		receiver, err = c.rawClient.NewReceiverForQueue(c.dlqSubName, nil)
+	} else {
+		return nil, fmt.Errorf("no DLQ configured")
+	}
 	if err != nil {
 		return nil, fmt.Errorf("error creating DLQ receiver: %w", err)
 	}
@@ -47,17 +56,31 @@ func (c *Client) ListDeadLetters(ctx context.Context, from, to *time.Time) ([]De
 
 // FetchMessage returns the full message body and properties for a given sequence number
 func (c *Client) FetchMessage(ctx context.Context, seq int64, deadLetter bool) (*azservicebus.ReceivedMessage, error) {
-	queue := c.queueName
+	var receiver *azservicebus.Receiver
+	var err error
+
 	if deadLetter {
-		queue = c.dlqQueueName
+		if c.dlqQueueName != "" {
+			receiver, err = c.rawClient.NewReceiverForQueue(c.dlqQueueName, nil)
+		} else if c.dlqSubName != "" {
+			receiver, err = c.rawClient.NewReceiverForQueue(c.dlqSubName, nil)
+		} else {
+			return nil, fmt.Errorf("no DLQ configured")
+		}
+	} else {
+		if c.queueName != "" {
+			receiver, err = c.rawClient.NewReceiverForQueue(c.queueName, nil)
+		} else if c.topicName != "" && c.subscription != "" {
+			receiver, err = c.rawClient.NewReceiverForSubscription(c.topicName, c.subscription, nil)
+		} else {
+			return nil, fmt.Errorf("no queue or topic/subscription configured")
+		}
 	}
-	receiver, err := c.rawClient.NewReceiverForQueue(queue, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating receiver: %w", err)
 	}
 	defer receiver.Close(ctx)
 
-	// Use FromSequenceNumber here:
 	opts := &azservicebus.PeekMessagesOptions{
 		FromSequenceNumber: &seq,
 	}

@@ -2,3 +2,5 @@ azure:
   servicebus:
     connectionString: "Endpoint=sb://<YOUR_NAMESPACE>.servicebus.windows.net/;SharedAccessKeyName=<KEY_NAME>;SharedAccessKey=<KEY>"
     queueName: "your-queue-name"
+    topicName: "your-topic-name"
+    subscriptionName: "your-subscription"

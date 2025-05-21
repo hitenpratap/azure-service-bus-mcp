@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus"
 	"github.com/hitenpratap/mcp-azure-service-bus/pkg/filter"
 )
 
@@ -14,9 +15,18 @@ type MessageInfo struct {
 	EnqueuedTime   time.Time `json:"enqueuedTime"`
 }
 
-// ListMessages returns messages in the queue, optionally filtered by datetime range
+// ListMessages returns messages in the queue or subscription, optionally filtered by datetime range
 func (c *Client) ListMessages(ctx context.Context, from, to *time.Time) ([]MessageInfo, error) {
-	receiver, err := c.rawClient.NewReceiverForQueue(c.queueName, nil)
+	var receiver *azservicebus.Receiver
+	var err error
+
+	if c.queueName != "" {
+		receiver, err = c.rawClient.NewReceiverForQueue(c.queueName, nil)
+	} else if c.topicName != "" && c.subscription != "" {
+		receiver, err = c.rawClient.NewReceiverForSubscription(c.topicName, c.subscription, nil)
+	} else {
+		return nil, fmt.Errorf("no queue or topic/subscription configured")
+	}
 	if err != nil {
 		return nil, fmt.Errorf("error creating receiver: %w", err)
 	}
