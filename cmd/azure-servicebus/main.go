@@ -30,8 +30,9 @@ func main() {
 	// 3) Register MCP tools
 	sm.Register(sbClient, srv)
 
-	// 4) Serve via stdio (for Claude Desktop integration)
-	if err := server.ServeStdio(srv); err != nil {
-		log.Fatalf("failed to run MCP server: %v", err)
+	// 4) Serve via SSE (for Claude Desktop integration)
+	sseServer := server.NewSSEServer(srv)
+	if err := sseServer.Start(":8080"); err != nil {
+		log.Fatalf("failed to start SSE server: %v", err)
 	}
 }
