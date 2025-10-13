@@ -17,24 +17,29 @@ type DeadLetterInfo struct {
 
 // ListDeadLetters returns messages in the dead-letter queue or subscription DLQ, optionally filtered by datetime range
 func (c *Client) ListDeadLetters(ctx context.Context, from, to *time.Time) ([]DeadLetterInfo, error) {
-	var receiver *azservicebus.Receiver
+	var receiver SDKReceiver // Changed from *azservicebus.Receiver
 	var err error
 
-	if c.dlqQueueName != "" {
-		receiver, err = c.rawClient.NewReceiverForQueue(c.dlqQueueName, nil)
-	} else if c.dlqSubName != "" {
-		receiver, err = c.rawClient.NewReceiverForQueue(c.dlqSubName, nil)
+	if c.DlqQueueName != "" {
+		receiver, err = c.AzClient.NewReceiverForQueue(c.DlqQueueName, nil)
+	} else if c.DlqSubName != "" {
+		// Assuming NewReceiverForQueue is the correct method for DLQ of a subscription based on previous structure.
+		// If there's a specific NewReceiverForSubscriptionDeadLetterQueue, that should be on the SDKClient interface.
+		// For now, sticking to the existing pattern.
+		receiver, err = c.AzClient.NewReceiverForQueue(c.DlqSubName, nil)
 	} else {
 		return nil, fmt.Errorf("no DLQ configured")
 	}
 	if err != nil {
 		return nil, fmt.Errorf("error creating DLQ receiver: %w", err)
 	}
-	defer receiver.Close(ctx)
+	if receiver != nil {
+		defer receiver.Close(ctx)
+	}
 
 	var result []DeadLetterInfo
 	for {
-		msgs, err := receiver.PeekMessages(ctx, 100, nil)
+		msgs, err := receiver.PeekMessages(ctx, 100, nil) // Call on SDKReceiver
 		if err != nil {
 			return nil, fmt.Errorf("DLQ receive error: %w", err)
 		}
@@ -56,22 +61,22 @@ func (c *Client) ListDeadLetters(ctx context.Context, from, to *time.Time) ([]De
 
 // FetchMessage returns the full message body and properties for a given sequence number
 func (c *Client) FetchMessage(ctx context.Context, seq int64, deadLetter bool) (*azservicebus.ReceivedMessage, error) {
-	var receiver *azservicebus.Receiver
+	var receiver SDKReceiver // Changed from *azservicebus.Receiver
 	var err error
 
 	if deadLetter {
-		if c.dlqQueueName != "" {
-			receiver, err = c.rawClient.NewReceiverForQueue(c.dlqQueueName, nil)
-		} else if c.dlqSubName != "" {
-			receiver, err = c.rawClient.NewReceiverForQueue(c.dlqSubName, nil)
+		if c.DlqQueueName != "" {
+			receiver, err = c.AzClient.NewReceiverForQueue(c.DlqQueueName, nil)
+		} else if c.DlqSubName != "" {
+			receiver, err = c.AzClient.NewReceiverForQueue(c.DlqSubName, nil) // Assuming same as above for DLQs
 		} else {
 			return nil, fmt.Errorf("no DLQ configured")
 		}
 	} else {
-		if c.queueName != "" {
-			receiver, err = c.rawClient.NewReceiverForQueue(c.queueName, nil)
-		} else if c.topicName != "" && c.subscription != "" {
-			receiver, err = c.rawClient.NewReceiverForSubscription(c.topicName, c.subscription, nil)
+		if c.QueueName != "" {
+			receiver, err = c.AzClient.NewReceiverForQueue(c.QueueName, nil)
+		} else if c.TopicName != "" && c.Subscription != "" {
+			receiver, err = c.AzClient.NewReceiverForSubscription(c.TopicName, c.Subscription, nil)
 		} else {
 			return nil, fmt.Errorf("no queue or topic/subscription configured")
 		}
@@ -79,12 +84,14 @@ func (c *Client) FetchMessage(ctx context.Context, seq int64, deadLetter bool) (
 	if err != nil {
 		return nil, fmt.Errorf("error creating receiver: %w", err)
 	}
-	defer receiver.Close(ctx)
+	if receiver != nil {
+		defer receiver.Close(ctx)
+	}
 
 	opts := &azservicebus.PeekMessagesOptions{
 		FromSequenceNumber: &seq,
 	}
-	msgs, err := receiver.PeekMessages(ctx, 1, opts)
+	msgs, err := receiver.PeekMessages(ctx, 1, opts) // Call on SDKReceiver
 	if err != nil {
 		return nil, fmt.Errorf("peek error: %w", err)
 	}
