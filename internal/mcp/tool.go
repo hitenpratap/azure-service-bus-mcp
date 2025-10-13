@@ -5,12 +5,20 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus"
 	"github.com/hitenpratap/mcp-azure-service-bus/internal/servicebus"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
 
-func Register(sb *servicebus.Client, srv *server.MCPServer) {
+// ServiceBus describes the subset of the service bus client used by the MCP tools.
+type ServiceBus interface {
+	ListMessages(ctx context.Context, from, to *time.Time) ([]servicebus.MessageInfo, error)
+	ListDeadLetters(ctx context.Context, from, to *time.Time) ([]servicebus.DeadLetterInfo, error)
+	FetchMessage(ctx context.Context, seq int64, deadLetter bool) (*azservicebus.ReceivedMessage, error)
+}
+
+func Register(sb ServiceBus, srv *server.MCPServer) {
 	// --- ListMessages ---
 	listMessages := mcp.NewTool(
 		"ListMessages",

@@ -8,7 +8,7 @@ import (
 
 // SDKReceiver is an interface wrapper for *azservicebus.Receiver methods used by this package.
 type SDKReceiver interface {
-	PeekMessages(ctx context.Context, maxMessageCount int32, options *azservicebus.PeekMessagesOptions) ([]*azservicebus.ReceivedMessage, error)
+	PeekMessages(ctx context.Context, maxMessageCount int, options *azservicebus.PeekMessagesOptions) ([]*azservicebus.ReceivedMessage, error)
 	Close(ctx context.Context) error
 	// Add other methods from *azservicebus.Receiver if needed by other functions
 }
@@ -27,10 +27,8 @@ type sbReceiverWrapper struct {
 	receiver *azservicebus.Receiver
 }
 
-func (r *sbReceiverWrapper) PeekMessages(ctx context.Context, maxMessageCount int32, options *azservicebus.PeekMessagesOptions) ([]*azservicebus.ReceivedMessage, error) {
-	// Attempting to cast maxMessageCount to int to match the compiler's apparent expectation in the environment.
-	// This contradicts SDK documentation but aims to resolve the build error.
-	return r.receiver.PeekMessages(ctx, int(maxMessageCount), options)
+func (r *sbReceiverWrapper) PeekMessages(ctx context.Context, maxMessageCount int, options *azservicebus.PeekMessagesOptions) ([]*azservicebus.ReceivedMessage, error) {
+	return r.receiver.PeekMessages(ctx, maxMessageCount, options)
 }
 
 func (r *sbReceiverWrapper) Close(ctx context.Context) error {

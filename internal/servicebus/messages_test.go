@@ -38,7 +38,7 @@ type MockSDKReceiver struct {
 	mock.Mock
 }
 
-func (m *MockSDKReceiver) PeekMessages(ctx context.Context, maxMessageCount int32, options *azservicebus.PeekMessagesOptions) ([]*azservicebus.ReceivedMessage, error) {
+func (m *MockSDKReceiver) PeekMessages(ctx context.Context, maxMessageCount int, options *azservicebus.PeekMessagesOptions) ([]*azservicebus.ReceivedMessage, error) {
 	args := m.Called(ctx, maxMessageCount, options)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -65,7 +65,7 @@ func TestListMessages_Unit(t *testing.T) {
 
 	t.Run("Client not configured", func(t *testing.T) {
 		// For this specific case, AzClient can be nil as it's checked before AzClient is used.
-		client := &Client{} 
+		client := &Client{}
 		_, err := client.ListMessages(ctx, nil, nil)
 		assert.Error(t, err)
 		assert.EqualError(t, err, "no queue or topic/subscription configured")
@@ -90,8 +90,8 @@ func TestListMessages_Unit(t *testing.T) {
 			queueName: "test-queue",
 			setupMock: func(t *testing.T, mockSDKClient *MockSDKClient, mockSDKReceiver *MockSDKReceiver) {
 				mockSDKClient.On("NewReceiverForQueue", "test-queue", (*azservicebus.ReceiverOptions)(nil)).Return(mockSDKReceiver, nil).Once()
-				mockSDKReceiver.On("PeekMessages", ctx, int32(100), (*azservicebus.PeekMessagesOptions)(nil)).Return([]*azservicebus.ReceivedMessage{createMsg(1, oneHourAgo), createMsg(2, now)}, nil).Once()
-				mockSDKReceiver.On("PeekMessages", ctx, int32(100), (*azservicebus.PeekMessagesOptions)(nil)).Return([]*azservicebus.ReceivedMessage{}, nil).Once() // End loop
+				mockSDKReceiver.On("PeekMessages", ctx, int(100), (*azservicebus.PeekMessagesOptions)(nil)).Return([]*azservicebus.ReceivedMessage{createMsg(1, oneHourAgo), createMsg(2, now)}, nil).Once()
+				mockSDKReceiver.On("PeekMessages", ctx, int(100), (*azservicebus.PeekMessagesOptions)(nil)).Return([]*azservicebus.ReceivedMessage{}, nil).Once() // End loop
 			},
 			expectedMessages:    []MessageInfo{{SequenceNumber: 1, EnqueuedTime: oneHourAgo}, {SequenceNumber: 2, EnqueuedTime: now}},
 			expectReceiverClose: true,
@@ -105,8 +105,8 @@ func TestListMessages_Unit(t *testing.T) {
 			toTime:           &now,
 			setupMock: func(t *testing.T, mockSDKClient *MockSDKClient, mockSDKReceiver *MockSDKReceiver) {
 				mockSDKClient.On("NewReceiverForSubscription", "test-topic", "test-sub", (*azservicebus.ReceiverOptions)(nil)).Return(mockSDKReceiver, nil).Once()
-				mockSDKReceiver.On("PeekMessages", ctx, int32(100), (*azservicebus.PeekMessagesOptions)(nil)).Return([]*azservicebus.ReceivedMessage{createMsg(1, twoHoursAgo), createMsg(2, oneHourAgo), createMsg(3, now)}, nil).Once()
-				mockSDKReceiver.On("PeekMessages", ctx, int32(100), (*azservicebus.PeekMessagesOptions)(nil)).Return([]*azservicebus.ReceivedMessage{}, nil).Once()
+				mockSDKReceiver.On("PeekMessages", ctx, int(100), (*azservicebus.PeekMessagesOptions)(nil)).Return([]*azservicebus.ReceivedMessage{createMsg(1, twoHoursAgo), createMsg(2, oneHourAgo), createMsg(3, now)}, nil).Once()
+				mockSDKReceiver.On("PeekMessages", ctx, int(100), (*azservicebus.PeekMessagesOptions)(nil)).Return([]*azservicebus.ReceivedMessage{}, nil).Once()
 			},
 			expectedMessages:    []MessageInfo{{SequenceNumber: 2, EnqueuedTime: oneHourAgo}, {SequenceNumber: 3, EnqueuedTime: now}},
 			expectReceiverClose: true,
@@ -138,7 +138,7 @@ func TestListMessages_Unit(t *testing.T) {
 			queueName: "test-queue-peek-fail",
 			setupMock: func(t *testing.T, mockSDKClient *MockSDKClient, mockSDKReceiver *MockSDKReceiver) {
 				mockSDKClient.On("NewReceiverForQueue", "test-queue-peek-fail", (*azservicebus.ReceiverOptions)(nil)).Return(mockSDKReceiver, nil).Once()
-				mockSDKReceiver.On("PeekMessages", ctx, int32(100), (*azservicebus.PeekMessagesOptions)(nil)).Return(nil, fmt.Errorf("peek error")).Once()
+				mockSDKReceiver.On("PeekMessages", ctx, int(100), (*azservicebus.PeekMessagesOptions)(nil)).Return(nil, fmt.Errorf("peek error")).Once()
 			},
 			expectedError:       "receive error: peek error",
 			expectReceiverClose: true,
@@ -149,7 +149,7 @@ func TestListMessages_Unit(t *testing.T) {
 			queueName: "empty-queue",
 			setupMock: func(t *testing.T, mockSDKClient *MockSDKClient, mockSDKReceiver *MockSDKReceiver) {
 				mockSDKClient.On("NewReceiverForQueue", "empty-queue", (*azservicebus.ReceiverOptions)(nil)).Return(mockSDKReceiver, nil).Once()
-				mockSDKReceiver.On("PeekMessages", ctx, int32(100), (*azservicebus.PeekMessagesOptions)(nil)).Return([]*azservicebus.ReceivedMessage{}, nil).Once()
+				mockSDKReceiver.On("PeekMessages", ctx, int(100), (*azservicebus.PeekMessagesOptions)(nil)).Return([]*azservicebus.ReceivedMessage{}, nil).Once()
 			},
 			expectedMessages:    []MessageInfo{},
 			expectReceiverClose: true,
@@ -162,8 +162,8 @@ func TestListMessages_Unit(t *testing.T) {
 			toTime:    &twoHoursLater,
 			setupMock: func(t *testing.T, mockSDKClient *MockSDKClient, mockSDKReceiver *MockSDKReceiver) {
 				mockSDKClient.On("NewReceiverForQueue", "test-queue-none-match", (*azservicebus.ReceiverOptions)(nil)).Return(mockSDKReceiver, nil).Once()
-				mockSDKReceiver.On("PeekMessages", ctx, int32(100), (*azservicebus.PeekMessagesOptions)(nil)).Return([]*azservicebus.ReceivedMessage{createMsg(1, twoHoursAgo), createMsg(2, oneHourAgo)}, nil).Once()
-				mockSDKReceiver.On("PeekMessages", ctx, int32(100), (*azservicebus.PeekMessagesOptions)(nil)).Return([]*azservicebus.ReceivedMessage{}, nil).Once()
+				mockSDKReceiver.On("PeekMessages", ctx, int(100), (*azservicebus.PeekMessagesOptions)(nil)).Return([]*azservicebus.ReceivedMessage{createMsg(1, twoHoursAgo), createMsg(2, oneHourAgo)}, nil).Once()
+				mockSDKReceiver.On("PeekMessages", ctx, int(100), (*azservicebus.PeekMessagesOptions)(nil)).Return([]*azservicebus.ReceivedMessage{}, nil).Once()
 			},
 			expectedMessages:    []MessageInfo{},
 			expectReceiverClose: true,
@@ -182,7 +182,7 @@ func TestListMessages_Unit(t *testing.T) {
 				client.TopicName = tc.topicName
 				client.Subscription = tc.subscriptionName
 			}
-			
+
 			tc.setupMock(t, mockSDKClient, mockSDKReceiver)
 			if tc.expectReceiverClose {
 				mockSDKReceiver.On("Close", ctx).Return(nil).Once()
