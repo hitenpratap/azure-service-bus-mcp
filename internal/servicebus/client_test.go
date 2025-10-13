@@ -51,11 +51,12 @@ func TestNewClient(t *testing.T) {
 
 		// Create a temporary valid config file
 		configContent := `
-serviceBus:
-  connectionString: "test-connection-string"
-  queueName: "test-queue"
-  topicName: "test-topic"
-  subscriptionName: "test-subscription"
+azure:
+  servicebus:
+    connectionString: "test-connection-string"
+    queueName: "test-queue"
+    topicName: "test-topic"
+    subscriptionName: "test-subscription"
 `
 		tmpFile, err := os.CreateTemp("", "config-*.yaml")
 		assert.NoError(t, err)
@@ -72,7 +73,7 @@ serviceBus:
 		assert.Equal(t, "test-queue", client.QueueName)
 		assert.Equal(t, "test-topic", client.TopicName)
 		assert.Equal(t, "test-subscription", client.Subscription)
-		
+
 		// Assert that AzClient is not nil and is of the expected wrapper type
 		assert.NotNil(t, client.AzClient)
 		assert.IsType(t, (*sbClientWrapper)(nil), client.AzClient, "client.AzClient should be of type *sbClientWrapper")
@@ -96,7 +97,6 @@ serviceBus:
 		assert.Contains(t, err.Error(), "error reading config:")
 		assert.Contains(t, err.Error(), "no such file or directory")
 
-
 		mockProvider.AssertExpectations(t) // Should have no expectations as the provider is not used.
 	})
 
@@ -108,9 +108,10 @@ serviceBus:
 
 		// Create a temporary malformed config file
 		configContent := `
-serviceBus:
-  connectionString: "test-connection-string"
-  queueName: "test-queue
+azure:
+  servicebus:
+    connectionString: "test-connection-string"
+    queueName: "test-queue
 ` // Malformed YAML - missing closing quote
 		tmpFile, err := os.CreateTemp("", "config-*.yaml")
 		assert.NoError(t, err)
@@ -125,7 +126,7 @@ serviceBus:
 		assert.Error(t, err)
 		assert.Nil(t, client)
 		assert.Contains(t, err.Error(), "error reading config:") // Viper error
-		assert.Contains(t, err.Error(), "yaml:") // YAML parsing error indication
+		assert.Contains(t, err.Error(), "yaml:")                 // YAML parsing error indication
 
 		mockProvider.AssertExpectations(t)
 	})
@@ -138,8 +139,9 @@ serviceBus:
 
 		// Create a temporary config file missing the connection string
 		configContent := `
-serviceBus:
-  queueName: "test-queue"
+azure:
+  servicebus:
+    queueName: "test-queue"
 `
 		tmpFile, err := os.CreateTemp("", "config-*.yaml")
 		assert.NoError(t, err)
@@ -153,7 +155,7 @@ serviceBus:
 		client, err := NewClient(tmpFile.Name())
 		assert.Error(t, err)
 		assert.Nil(t, client)
-		assert.EqualError(t, err, "serviceBus.connectionString is required")
+		assert.EqualError(t, err, "azure.servicebus.connectionString is required")
 
 		mockProvider.AssertExpectations(t)
 	})
@@ -170,9 +172,10 @@ serviceBus:
 
 		// Create a temporary valid config file
 		configContent := `
-serviceBus:
-  connectionString: "test-connection-string-err"
-  queueName: "test-queue"
+azure:
+  servicebus:
+    connectionString: "test-connection-string-err"
+    queueName: "test-queue"
 `
 		tmpFile, err := os.CreateTemp("", "config-*.yaml")
 		assert.NoError(t, err)

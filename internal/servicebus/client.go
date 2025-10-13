@@ -29,9 +29,9 @@ type Client struct {
 	AzClient     SDKClient // Changed from *azservicebus.Client to our SDKClient interface
 	QueueName    string    // Made public for tests
 	DlqQueueName string    // Made public for tests
-	TopicName    string               // Made public for tests
-	Subscription string               // Made public for tests
-	DlqSubName   string               // Made public for tests
+	TopicName    string    // Made public for tests
+	Subscription string    // Made public for tests
+	DlqSubName   string    // Made public for tests
 }
 
 // NewClient reads connection info from config and returns a Client
@@ -42,13 +42,13 @@ func NewClient(configPath string) (*Client, error) {
 		return nil, fmt.Errorf("error reading config: %w", err)
 	}
 
-	connStr := viper.GetString("serviceBus.connectionString") // Updated path to match test config
+	connStr := viper.GetString("azure.servicebus.connectionString")
 	if connStr == "" {
-		return nil, fmt.Errorf("serviceBus.connectionString is required")
+		return nil, fmt.Errorf("azure.servicebus.connectionString is required")
 	}
-	queue := viper.GetString("serviceBus.queueName") // Updated path to match test config
-	topic := viper.GetString("serviceBus.topicName") // Updated path to match test config
-	sub := viper.GetString("serviceBus.subscriptionName") // Updated path to match test config
+	queue := viper.GetString("azure.servicebus.queueName")
+	topic := viper.GetString("azure.servicebus.topicName")
+	sub := viper.GetString("azure.servicebus.subscriptionName")
 
 	dlq := ""
 	dlqSub := ""
